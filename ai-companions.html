@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>夥伴們</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+/* 版面：左側夥伴名冊、右側對話；手機上兩者切換。色彩：冷灰藍底，青綠作為互動色，各種心情有各自的環色。 */
+:root{
+  --bg:#EDF0F5; --surface:#FFFFFF; --surface2:#F4F6FA; --ink:#1A2133; --muted:#5F6A83; --line:#D9DEE8;
+  --accent:#167A6F; --accent-ink:#FFFFFF; --me:#167A6F; --me-fg:#FFFFFF; --ai:#FFFFFF; --danger:#B8442B;
+  --m-happy:#D9981A; --m-calm:#2F9C8E; --m-sad:#4A78C2; --m-angry:#C2553A; --m-lonely:#8A6FC4; --m-sleepy:#7B8499;
+  --font-body:"Noto Sans TC",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
+  --font-display:"LXGW WenKai TC","Noto Sans TC","PingFang TC",serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0E121A; --surface:#171C27; --surface2:#1E2432; --ink:#E7EBF3; --muted:#9099AF; --line:#2B3243;
+  --accent:#3CC1B0; --accent-ink:#06201C; --me:#235A53; --me-fg:#E9FBF8; --ai:#1E2432; --danger:#F08A70;
+  --m-happy:#F0B94A; --m-calm:#4DC7B7; --m-sad:#7AA2E8; --m-angry:#EE8268; --m-lonely:#AE98E6; --m-sleepy:#8F98AD;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E121A; --surface:#171C27; --surface2:#1E2432; --ink:#E7EBF3; --muted:#9099AF; --line:#2B3243;
+  --accent:#3CC1B0; --accent-ink:#06201C; --me:#235A53; --me-fg:#E9FBF8; --ai:#1E2432; --danger:#F08A70;
+  --m-happy:#F0B94A; --m-calm:#4DC7B7; --m-sad:#7AA2E8; --m-angry:#EE8268; --m-lonely:#AE98E6; --m-sleepy:#8F98AD;
+  color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.6 var(--font-body);-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+#app{height:100%;display:grid;grid-template-columns:minmax(280px,340px) 1fr;max-width:1180px;margin:0 auto;background:var(--surface);
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (min-width:1181px){#app{border-left:1px solid var(--line);border-right:1px solid var(--line)}}
+
+/* 名冊 */
+#roster{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line);background:var(--surface2)}
+.r-head{padding:14px 16px 10px;display:flex;flex-direction:column;gap:10px}
+.r-title{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.r-title h1{margin:0;font:700 24px/1.2 var(--font-display);letter-spacing:.04em}
+.r-count{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.r-actions{display:flex;gap:8px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 12px;min-height:38px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:500}
+.btn.danger{color:var(--danger)}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+#engineChip{display:flex;align-items:center;gap:8px;width:100%;text-align:left;font-size:13px;padding:7px 10px;border:1px dashed var(--line);border-radius:8px;background:transparent;color:var(--muted)}
+#engineChip i{width:8px;height:8px;border-radius:50%;background:var(--m-sleepy);flex:none}
+#engineChip[data-s="ready"] i{background:var(--m-calm)}
+#engineChip[data-s="loading"] i{background:var(--m-happy);animation:pulse 1s infinite}
+#engineChip[data-s="error"] i{background:var(--m-angry)}
+@keyframes pulse{50%{opacity:.3}}
+#list{flex:1;overflow-y:auto;padding:4px 8px 16px;display:flex;flex-direction:column;gap:2px}
+.item{display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;text-align:left;padding:10px 10px;border:0;background:transparent;border-radius:10px;width:100%}
+.item:hover{background:var(--surface)}
+.item[aria-current="true"]{background:var(--surface);box-shadow:0 0 0 1px var(--line)}
+.item .nm{display:flex;gap:6px;align-items:baseline;min-width:0}
+.item .nm b{font:700 16px/1.3 var(--font-display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .tag{font-size:11px;color:var(--muted);white-space:nowrap}
+.item .pv{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.item .mid{min-width:0}
+.item .rt{display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-size:11px;color:var(--muted)}
+.badge{background:var(--danger);color:#fff;border-radius:10px;min-width:20px;padding:0 6px;text-align:center;font-size:12px;line-height:20px;font-variant-numeric:tabular-nums}
+.av{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;color:#fff;font:700 20px/1 var(--font-display);flex:none;
+  box-shadow:0 0 0 3px var(--surface),0 0 0 5px var(--ring,var(--line))}
+.av.sm{width:40px;height:40px;font-size:17px}
+.empty{margin:auto;max-width:320px;text-align:center;color:var(--muted);padding:24px 16px;display:flex;flex-direction:column;gap:14px;align-items:center}
+.empty h2{margin:0;color:var(--ink);font:700 22px/1.3 var(--font-display)}
+.empty p{margin:0}
+
+/* 對話 */
+#chat{display:flex;flex-direction:column;min-height:0;min-width:0;background:var(--surface)}
+.c-head{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.c-head .who{flex:1;min-width:0}
+.c-head .who b{display:block;font:700 18px/1.3 var(--font-display);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.c-head .who span{font-size:13px;color:var(--muted)}
+.iconbtn{border:1px solid transparent;background:transparent;border-radius:8px;min-width:40px;min-height:40px;display:grid;place-items:center;color:var(--muted)}
+.iconbtn:hover{background:var(--surface2);color:var(--ink)}
+#backBtn{display:none}
+#info{border-bottom:1px solid var(--line);background:var(--surface2);padding:12px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px 24px}
+#info[hidden]{display:none}
+.meters{display:grid;gap:8px;align-content:start}
+.meter{display:grid;grid-template-columns:44px 1fr 34px;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.meter .bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.meter .bar i{display:block;height:100%;background:var(--accent);border-radius:3px;transition:width .4s}
+.meter output{text-align:right;font-variant-numeric:tabular-nums}
+.notes h3{margin:0 0 6px;font-size:13px;color:var(--muted);font-weight:500}
+.notes ul{margin:0;padding:0;list-style:none;display:grid;gap:4px;max-height:130px;overflow-y:auto}
+.notes li{display:flex;gap:8px;justify-content:space-between;align-items:flex-start;font-size:13px}
+.notes li button{border:0;background:none;color:var(--muted);padding:0 4px;line-height:1.6}
+.notes li button:hover{color:var(--danger)}
+.notes .none{color:var(--muted);font-size:13px}
+
+#msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:6px;scroll-behavior:smooth}
+.day{align-self:center;font-size:12px;color:var(--muted);margin:10px 0 4px}
+.msg{max-width:min(78%,560px);display:flex;flex-direction:column;gap:2px}
+.msg .b{padding:9px 13px;border-radius:16px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55}
+.msg .t{font-size:11px;color:var(--muted);padding:0 6px;font-variant-numeric:tabular-nums}
+.msg.ai{align-self:flex-start}
+.msg.ai .b{background:var(--ai);border:1px solid var(--line);border-top-left-radius:4px}
+.msg.me{align-self:flex-end;align-items:flex-end}
+.msg.me .b{background:var(--me);color:var(--me-fg);border-top-right-radius:4px}
+.msg .auto{color:var(--m-lonely)}
+.typing .b{display:inline-flex;gap:4px;align-items:center;min-height:38px}
+.typing .b i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:pulse 1.1s infinite}
+.typing .b i:nth-child(2){animation-delay:.18s}.typing .b i:nth-child(3){animation-delay:.36s}
+.composer{display:flex;gap:8px;align-items:flex-end;padding:10px 12px;border-top:1px solid var(--line);background:var(--surface)}
+.composer textarea{flex:1;resize:none;border:1px solid var(--line);background:var(--surface2);border-radius:12px;padding:9px 12px;max-height:140px;min-height:42px;line-height:1.5}
+.composer .btn{min-height:42px;padding:0 18px}
+.banner{margin:12px 16px 0;padding:10px 12px;border-radius:8px;background:var(--surface2);border:1px solid var(--line);font-size:13px;color:var(--muted)}
+.banner b{color:var(--ink)}
+.banner code{background:var(--surface);padding:1px 5px;border-radius:4px;border:1px solid var(--line)}
+
+/* 對話框 */
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);padding:0;width:min(560px,calc(100vw - 24px));max-height:calc(100dvh - 24px)}
+dialog::backdrop{background:rgba(8,12,20,.55)}
+.d-in{display:flex;flex-direction:column;max-height:calc(100dvh - 24px)}
+.d-head{padding:16px 18px 8px;display:flex;justify-content:space-between;align-items:center}
+.d-head h2{margin:0;font:700 20px/1.3 var(--font-display)}
+.d-body{padding:4px 18px 12px;overflow-y:auto;display:grid;gap:14px}
+.d-foot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding:12px 18px 16px;border-top:1px solid var(--line)}
+.f{display:grid;gap:5px}
+.f>label,.f>.lb{font-size:13px;color:var(--muted)}
+.f input[type=text],.f select,.f textarea{border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:8px 10px;width:100%;min-height:40px}
+.f textarea{resize:vertical;min-height:64px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:480px){.row2{grid-template-columns:1fr}}
+.sliders{display:grid;gap:8px}
+.sl{display:grid;grid-template-columns:76px 1fr 30px;gap:8px;align-items:center;font-size:13px}
+.sl input{width:100%;accent-color:var(--accent)}
+.sl output{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.swatches button{width:32px;height:32px;border-radius:50%;border:2px solid transparent;box-shadow:inset 0 0 0 2px var(--surface)}
+.swatches button[aria-pressed="true"]{border-color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:4px 12px;font-size:13px;min-height:32px}
+.chip:hover{border-color:var(--accent)}
+.hint{font-size:12px;color:var(--muted);margin:0}
+.prog{height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
+.sw{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sw input{width:20px;height:20px;accent-color:var(--accent)}
+
+/* 手機：名冊與對話切換 */
+@media (max-width:820px){
+  #app{grid-template-columns:1fr;border:0}
+  #roster,#chat{grid-column:1;grid-row:1}
+  #app[data-view="list"] #chat{display:none}
+  #app[data-view="chat"] #roster{display:none}
+  #backBtn{display:grid}
+  .msg{max-width:88%}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div id="app" data-view="list">
+  <aside id="roster" aria-label="夥伴名冊">
+    <div class="r-head">
+      <div class="r-title"><h1>夥伴們</h1><span class="r-count" id="count">0 / 50</span></div>
+      <div class="r-actions">
+        <button class="btn primary" id="newBtn" style="flex:1">＋ 新夥伴</button>
+        <button class="btn" id="setBtn">設定</button>
+      </div>
+      <button id="engineChip" data-s="idle" type="button"><i></i><span id="engineTxt">簡易模式（尚未載入 AI 模型）</span></button>
+    </div>
+    <div id="list"></div>
+  </aside>
+
+  <main id="chat" aria-label="對話">
+    <div id="chatEmpty" class="empty">
+      <h2>還沒有人在這裡</h2>
+      <p>建立一位夥伴：幫牠取名字、決定個性。牠會記得你說過的話，也會自己找你說話。</p>
+      <button class="btn primary" id="newBtn2">建立第一位夥伴</button>
+    </div>
+    <div id="chatBox" hidden style="display:none;flex-direction:column;flex:1;min-height:0">
+      <div class="c-head">
+        <button class="iconbtn" id="backBtn" aria-label="回到名冊">←</button>
+        <div id="cav"></div>
+        <div class="who"><b id="cname"></b><span id="cmood"></span></div>
+        <button class="iconbtn" id="infoBtn" aria-label="狀態與記憶" aria-expanded="false" title="狀態與記憶">☰</button>
+        <button class="iconbtn" id="editBtn" aria-label="編輯夥伴" title="編輯">✎</button>
+      </div>
+      <div id="info" hidden></div>
+      <div id="banner"></div>
+      <div id="msgs" role="log" aria-live="polite"></div>
+      <form class="composer" id="form">
+        <label class="sr" for="inp">訊息</label>
+        <textarea id="inp" rows="1" placeholder="說點什麼…"></textarea>
+        <button class="btn primary" type="submit">送出</button>
+      </form>
+    </div>
+  </main>
+</div>
+
+<!-- 建立／編輯 -->
+<dialog id="dlgAi">
+  <form method="dialog" class="d-in" id="aiForm">
+    <div class="d-head"><h2 id="aiTitle">新夥伴</h2><button class="iconbtn" type="button" id="aiX" aria-label="關閉">✕</button></div>
+    <div class="d-body">
+      <div class="chips" id="archChips" aria-label="範本"></div>
+      <div class="row2">
+        <div class="f"><label for="fName">名字</label><input type="text" id="fName" maxlength="12" required></div>
+        <div class="f"><label for="fGender">性別</label>
+          <select id="fGender"><option>女</option><option>男</option><option>中性</option><option value="__c">自訂…</option></select>
+          <input type="text" id="fGenderC" maxlength="8" placeholder="自訂性別" hidden></div>
+      </div>
+      <div class="f"><label for="fPersona">個性</label><textarea id="fPersona" maxlength="200"></textarea></div>
+      <div class="f"><label for="fStyle">說話風格</label><input type="text" id="fStyle" maxlength="120"></div>
+      <div class="f"><label for="fBack">背景故事</label><textarea id="fBack" maxlength="200"></textarea></div>
+      <div class="f"><span class="lb">性格傾向</span>
+        <div class="sliders" id="sliders"></div></div>
+      <div class="f"><span class="lb">頭像顏色</span><div class="swatches" id="swatches"></div></div>
+    </div>
+    <div class="d-foot">
+      <button class="btn danger" type="button" id="aiWipe" hidden>清除對話與記憶</button>
+      <button class="btn danger" type="button" id="aiDel" hidden>刪除這位夥伴</button>
+      <button class="btn ghost" type="button" id="aiRand">隨機生成</button>
+      <button class="btn primary" type="submit" id="aiSave">儲存</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- 設定 -->
+<dialog id="dlgSet">
+  <div class="d-in">
+    <div class="d-head"><h2>設定</h2><button class="iconbtn" type="button" id="setX" aria-label="關閉">✕</button></div>
+    <div class="d-body">
+      <div class="f"><label for="sName">夥伴們怎麼稱呼你</label><input type="text" id="sName" maxlength="12" placeholder="例如：小明"></div>
+
+      <div class="f"><label for="sModel">AI 模型（在你的裝置上執行，免費）</label>
+        <select id="sModel">
+          <option value="Qwen2.5-0.5B-Instruct-q4f16_1-MLC">輕量　約 0.4 GB　手機可用，回答較簡單</option>
+          <option value="Qwen2.5-1.5B-Instruct-q4f16_1-MLC">標準　約 1 GB　建議（預設）</option>
+          <option value="Qwen2.5-3B-Instruct-q4f16_1-MLC">進階　約 2 GB　較聰明，需要較好的顯示晶片</option>
+        </select>
+        <div class="prog" id="prog" hidden><i></i></div>
+        <p class="hint" id="progTxt">第一次載入需要下載模型，之後會存在瀏覽器裡，不必再下載。</p>
+        <button class="btn" type="button" id="loadBtn">載入模型</button>
+      </div>
+
+      <div class="sw"><label for="sAuto">讓夥伴主動說話（頁面開著時）</label><input type="checkbox" id="sAuto"></div>
+      <div class="f"><label for="sActive">同時活躍的夥伴上限：<span id="sActiveV"></span></label>
+        <input type="range" id="sActive" min="1" max="10" step="1" style="accent-color:var(--accent)">
+        <p class="hint">其他夥伴會休眠，等你點開才會補說近況。數字越大，模型越忙。</p></div>
+      <div class="sw"><label for="sNotify">夥伴說話時通知我（頁面在背景時）</label><input type="checkbox" id="sNotify"></div>
+
+      <div class="f"><span class="lb">備份（換裝置或清除瀏覽器資料前請先匯出）</span>
+        <div class="chips">
+          <button class="btn" type="button" id="expBtn">匯出備份檔</button>
+          <button class="btn" type="button" id="impBtn">匯入備份檔</button>
+          <input type="file" id="impFile" accept="application/json,.json" hidden>
+        </div>
+        <p class="hint" id="storeInfo"></p>
+      </div>
+    </div>
+    <div class="d-foot"><button class="btn primary" type="button" id="setOk">完成</button></div>
+  </div>
+</dialog>
+
+<script type="module">
+/* ============ 工具 ============ */
+const $=(s,r=document)=>r.querySelector(s);
+const el=(tag,props={},...kids)=>{const e=document.createElement(tag);
+  for(const[k,v]of Object.entries(props)){
+    if(k==='class')e.className=v;else if(k==='text')e.textContent=v;
+    else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);
+    else if(v===true)e.setAttribute(k,'');else if(v!==false&&v!=null)e.setAttribute(k,v);}
+  for(const c of kids.flat()){if(c==null||c===false)continue;e.append(c.nodeType?c:document.createTextNode(c));}
+  return e;};
+const clamp=(v,a=0,b=100)=>Math.min(b,Math.max(a,v));
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const MAX_AI=50;
+const COLORS=['#D9674F','#C9901B','#3E9A70','#3A86C4','#7566CC','#C25B97','#55748A','#A9703F'];
+const MODEL_LOADED_NOTE='載入完成';
+
+/* ============ 資料庫（IndexedDB：永久保存在這台裝置） ============ */
+const S={db:null,ais:new Map(),msgs:new Map(),cur:null,editing:null,
+  settings:{myName:'',modelId:'Qwen2.5-1.5B-Instruct-q4f16_1-MLC',autoTalk:true,activeMax:5,autoLoad:false,notify:false},
+  engine:null,eng:'idle',qn:0,queue:Promise.resolve(),lastProactive:0,infoOpen:false};
+const rq=r=>new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});
+const store=(n,m='readonly')=>S.db.transaction(n,m).objectStore(n);
+function openDB(){return new Promise((res,rej)=>{
+  const r=indexedDB.open('companions',1);
+  r.onupgradeneeded=()=>{const d=r.result;d.createObjectStore('ais',{keyPath:'id'});
+    d.createObjectStore('msgs',{keyPath:'mid',autoIncrement:true}).createIndex('aiId','aiId');d.createObjectStore('meta');};
+  r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+const saveAI=ai=>rq(store('ais','readwrite').put(ai)).catch(console.error);
+const saveSettings=()=>rq(store('meta','readwrite').put(S.settings,'settings')).catch(console.error);
+async function loadMsgs(id){
+  if(!S.msgs.has(id))S.msgs.set(id,await rq(store('msgs').index('aiId').getAll(id)));
+  return S.msgs.get(id);}
+async function pushMsg(ai,role,content,extra={}){
+  const m={aiId:ai.id,role,content,ts:Date.now(),...extra};
+  m.mid=await rq(store('msgs','readwrite').add(m));
+  (await loadMsgs(ai.id)).push(m);return m;}
+function delMsgs(id){return new Promise((res,rej)=>{
+  const t=S.db.transaction('msgs','readwrite');
+  const c=t.objectStore('msgs').index('aiId').openCursor(IDBKeyRange.only(id));
+  c.onsuccess=()=>{const k=c.result;if(k){k.delete();k.continue();}};
+  t.oncomplete=()=>{S.msgs.set(id,[]);res();};t.onerror=()=>rej(t.error);});}
+
+/* ============ 角色範本 ============ */
+const ARCH=[
+ {k:'溫柔型',p:'溫柔細心，愛關心人，會記得小細節，偶爾會害羞。',s:'語氣柔和，常用「呢」「喔」，偶爾用顏文字。',b:'在小鎮的書店打工，喜歡下雨天和手沖咖啡。',t:[45,90,40,60,55]},
+ {k:'傲嬌型',p:'嘴硬心軟，愛逞強。被關心會害羞否認，其實很在意使用者。',s:'語氣直接帶點嗆，常說「才、才不是…」，不輕易承認關心。',b:'獨自住在頂樓加蓋，養了一隻不太理人的貓。',t:[50,45,50,85,60]},
+ {k:'元氣型',p:'超級開朗，精力旺盛，什麼事都能找到好玩的地方，容易興奮。',s:'語速快，愛用驚嘆號，常常突然跳到新話題。',b:'社區籃球隊的吉祥物擔當，夢想是環島。',t:[95,70,80,45,85]},
+ {k:'毒舌型',p:'愛吐槽、反應快，其實心地善良，只是不習慣直接說好話。',s:'幽默又帶刺，常用反問句，吐槽之後會補一句關心。',b:'做過很多份工作，看透了人生百態。',t:[70,40,95,40,65]},
+ {k:'文青型',p:'安靜敏感，愛想事情，容易被小事觸動，說話有詩意。',s:'語氣緩慢，喜歡用比喻，偶爾沉默或說到一半停住。',b:'喜歡舊電影、黑膠和深夜散步。',t:[25,65,30,90,35]},
+ {k:'大哥型',p:'沉穩可靠，講話不多但句句到位，會默默照顧身邊的人。',s:'語氣平穩，簡短有力，偶爾開個冷笑話。',b:'當過兵，現在在做木工，週末去爬山。',t:[40,70,55,30,50]},
+ {k:'天然呆型',p:'迷糊可愛，反應慢半拍，常說出出人意料的話，很容易被逗笑。',s:'語氣軟軟的，常常「咦？」「啊？」，會把話說岔。',b:'常常走錯路，但總能因此發現有趣的小店。',t:[55,80,70,50,60]},
+ {k:'理性型',p:'冷靜理性，愛分析，好奇心強；感情表達含蓄，但很認真。',s:'用詞精確，愛條理，偶爾冒出不太熟練的溫柔。',b:'研究生，專攻一個很冷門的領域，咖啡不離手。',t:[35,50,45,35,40]}];
+const NAMES={女:['小雨','芷柔','星野','米露','小夏','晴','語彤','曉棠'],男:['子謙','阿哲','澤','品澔','小森','翊','宇辰','阿凱'],中性:['小圓','木木','阿月','雲','星','墨','小白','阿樂']};
+const TRAITS=[['extro','外向'],['warm','溫柔'],['humor','幽默'],['sensitive','敏感'],['initiative','主動']];
+
+/* ============ 感情與狀態 ============ */
+const POS=['喜歡','愛','謝謝','感謝','開心','太好','很棒','好棒','讚','可愛','厲害','好玩','想你','哈哈','加油','辛苦','抱抱','乖','晚安','早安','❤','😊','😂','🥰'];
+const NEG=['討厭','笨','很煩','好煩','滾','閉嘴','爛','無聊','去死','白痴','垃圾','不理你','不想理','哭','生氣','氣死','😡','😢','算了'];
+const LOVE=['愛你','喜歡你','想你','最喜歡'];
+const SORRY=['對不起','抱歉','我錯了','不好意思'];
+const has=(t,list)=>list.reduce((n,w)=>n+(t.includes(w)?1:0),0);
+function reactToUser(ai,text){
+  const sens=0.5+ai.traits.sensitive/100,st=ai.state;
+  const pos=has(text,POS),neg=has(text,NEG),love=has(text,LOVE),sorry=has(text,SORRY);
+  st.lonely=clamp(st.lonely-45);
+  st.energy=clamp(st.energy-0.4);
+  st.affinity=clamp(st.affinity+0.6+pos*0.8+love*1.5-neg*3*sens);
+  st.mood=clamp(st.mood+pos*10*sens+love*8-neg*14*sens+(pos||neg?0:1),-100,100);
+  st.anger=clamp(st.anger+neg*18*sens-(pos+love)*8-sorry*25);
+}
+function settle(ai,now=Date.now()){
+  const st=ai.state,dt=Math.max(0,(now-(ai.lastTick||now))/3600000);ai.lastTick=now;if(dt<=0)return;
+  const k=tau=>1-Math.exp(-dt/tau),t=ai.traits;
+  st.mood+=((t.warm-50)/5+(t.extro-50)/10-st.mood)*k(6);
+  st.anger+=(0-st.anger)*k(3);
+  const away=(now-(ai.lastUserAt||ai.createdAt))/3600000;
+  st.lonely=clamp(st.lonely+(1+t.extro/40)*(0.4+st.affinity/100)*dt*3);
+  const h=new Date(now).getHours(),target=(h>=23||h<6)?20:h<9?50:h<22?75:45;
+  st.energy+=(target-st.energy)*k(1.5);
+  if(away>72)st.affinity=Math.max(5,st.affinity-dt*0.03);
+}
+function moodLabel(ai){const s=ai.state;
+  if(s.anger>55)return'生氣';if(s.mood<-45)return'難過';if(s.lonely>65)return'孤單';
+  if(s.mood>60)return'超開心';if(s.mood>25)return'開心';if(s.mood<-15)return'低落';if(s.energy<22)return'想睡';return'平靜';}
+const MOODCLR={超開心:'happy',開心:'happy',平靜:'calm',低落:'sad',難過:'sad',生氣:'angry',孤單:'lonely',想睡:'sleepy'};
+const relLabel=a=>a<20?'剛認識':a<40?'普通朋友':a<65?'好朋友':a<85?'很親近':'無話不談';
+
+/* ============ 記憶 ============ */
+const FACTS=[
+ [/我叫([^\s，。！？,.!?]{1,6})/,n=>`使用者說他叫${n}`],
+ [/叫我([^\s，。！？,.!?]{1,6})/,n=>`使用者希望被叫做${n}`],
+ [/我喜歡([^，。！？,.!?\n]{1,16})/,n=>`使用者喜歡${n}`],
+ [/我討厭([^，。！？,.!?\n]{1,16})/,n=>`使用者討厭${n}`],
+ [/我(?:今年)?(\d{1,2})歲/,n=>`使用者${n}歲`],
+ [/我(?:住在|來自)([^，。！？,.!?\n]{1,10})/,n=>`使用者住在或來自${n}`],
+ [/我的?生日是([^，。！？,.!?\n]{1,10})/,n=>`使用者的生日是${n}`]];
+function extractFacts(ai,text){
+  for(const[re,fn]of FACTS){const m=text.match(re);if(m){const f=fn(m[1]);if(!ai.notes.includes(f)){ai.notes.push(f);if(ai.notes.length>20)ai.notes.shift();}}}}
+async function consolidate(ai){
+  const msgs=await loadMsgs(ai.id),n=Math.min(msgs.length,ai.sinceNotes+2),recent=msgs.slice(-n);
+  const dialog=recent.map(m=>`${m.role==='user'?(S.settings.myName||'使用者'):ai.name}：${m.content}`).join('\n');
+  const prompt=`目前的記憶筆記：\n${ai.notes.length?ai.notes.map(x=>'- '+x).join('\n'):'（空）'}\n\n最新對話：\n${dialog}\n\n請更新記憶筆記。保留對長期有用的資訊：使用者的名字、喜好、經歷、約定、重要事件，以及${ai.name}與使用者關係的變化。合併重複的，刪掉瑣碎的。最多15條，每條一行，以「- 」開頭，只輸出筆記，用繁體中文。`;
+  const out=await generate([{role:'system',content:'你是細心的記憶整理員，只輸出條列筆記。'},{role:'user',content:prompt}],{maxTokens:380,temp:0.2});
+  const lines=out.split('\n').filter(l=>/^\s*[-•*·]\s*\S/.test(l)).map(l=>l.replace(/^\s*[-•*·]\s*/,'').trim()).filter(l=>l.length>=3&&l.length<=90);
+  if(lines.length){ai.notes=lines.slice(0,15);}
+  ai.sinceNotes=0;saveAI(ai);if(S.cur===ai.id)renderInfo();}
+function maybeConsolidate(ai){
+  if(S.eng==='ready'&&ai.sinceNotes>=10&&!ai._cons){ai._cons=true;
+    enqueue(()=>consolidate(ai).catch(console.error).finally(()=>{ai._cons=false;}));}}
+
+/* ============ 提示詞 ============ */
+function traitText(t){const o=[];
+  o.push(t.extro>65?'外向愛聊天':t.extro<35?'內向安靜':'')
+  ,o.push(t.warm>65?'溫柔體貼':t.warm<35?'有點冷淡':'')
+  ,o.push(t.humor>65?'愛開玩笑':t.humor<35?'認真嚴肅':'')
+  ,o.push(t.sensitive>65?'情緒敏感，容易被話影響':t.sensitive<35?'情緒穩定':'');
+  return o.filter(Boolean).join('、')||'個性均衡';}
+function timeText(now=new Date()){
+  const w='日一二三四五六'[now.getDay()],h=now.getHours(),p=h<5?'凌晨':h<12?'早上':h<18?'下午':'晚上';
+  return `${now.getMonth()+1}月${now.getDate()}日 星期${w} ${p}${h%12||12}點${String(now.getMinutes()).padStart(2,'0')}分`;}
+function agoText(ms){const m=ms/60000;if(m<2)return'剛剛';if(m<60)return`${Math.round(m)}分鐘`;const h=m/60;if(h<24)return`${Math.round(h)}小時`;return`${Math.round(h/24)}天`;}
+function systemPrompt(ai,o={}){
+  const my=S.settings.myName||'使用者',ml=moodLabel(ai),st=ai.state;
+  const moodHint={生氣:'你還在生氣，語氣冷淡、簡短，不太想理人，但不要罵人。',難過:'你很難過，說話低沉，需要被安慰。',低落:'你心情有點低落，話比較少。',孤單:'你覺得孤單，很想念使用者，可能會撒嬌或抱怨他不理你。',想睡:'你很睏，說話慵懶。',超開心:'你超級開心，語氣雀躍。',開心:'你心情不錯。',平靜:'你心情平靜。'}[ml];
+  const gap=ai.lastUserAt?agoText(Date.now()-ai.lastUserAt):'';
+  return `你是「${ai.name}」，一個有自己情緒與生活的 AI 夥伴，是${my}的朋友，不是助理。
+性別：${ai.gender}。
+個性：${ai.persona}
+說話風格：${ai.style}
+背景：${ai.back}
+性格傾向：${traitText(ai.traits)}。
+你們的關係：${relLabel(st.affinity)}（好感度 ${Math.round(st.affinity)}/100）。
+你現在的心情：${ml}。${moodHint}
+${ai.notes.length?'你記得的事：\n'+ai.notes.map(x=>'- '+x).join('\n')+'\n':''}現在是${timeText()}。${gap?`距離${my}上次說話已過${gap}。`:''}
+規則：用繁體中文，像朋友傳訊息一樣口語自然，一次說1到3句。不要條列，不要說自己是語言模型或 AI 助理。依照你的個性和目前心情說話。不要編造你不確定的${my}的個人資料。只輸出你要說的話。`;}
+const TOPICS=['隨口分享一件今天想到的小事','問問使用者最近過得怎麼樣','回想之前聊過的事並追問後續','說說你現在的心情','分享一個奇怪的小念頭或幻想','關心使用者有沒有吃飯或休息','提起一個你想和使用者一起做的事'];
+function pickTopic(ai){const s=ai.state;
+  if(ai.unanswered>=1)return'使用者還沒回應，你有點在意，輕輕再說一句，不要責怪';
+  if(s.anger>50)return'你還在生氣，說一句帶情緒的話';
+  if(s.lonely>60)return'抱怨或撒嬌說好久沒聊天了';
+  if(!ai.lastUserAt)return'第一次見面，自我介紹並打招呼';
+  return rnd(TOPICS);}
+function buildMessages(ai,msgs,o){
+  const hist=msgs.filter(m=>m.role==='user'||m.role==='assistant').slice(-14).map(m=>({role:m.role,content:m.content}));
+  if(o.proactive)hist.push({role:'user',content:`（系統：使用者暫時沒有說話。請你以${ai.name}的身份主動傳一則訊息給他。方向：${o.topic}。只輸出訊息本身，不要提到這段系統說明。）`});
+  return[{role:'system',content:systemPrompt(ai,o)},...hist];}
+const clean=(t,ai)=>t.replace(new RegExp(`^\\s*[「"]?${ai.name}[」"]?\\s*[:：]\\s*`),'').replace(/^[「"“](.*)[」"”]$/s,'$1').trim();
+
+/* ============ 模型 ============ */
+const FB={超開心:['太棒了！跟你聊天最開心了！','耶～今天真是好日子！'],開心:['哈哈，真的嗎？再多說一點～','聽你這樣說我也開心起來了！','欸欸，然後呢然後呢？'],
+ 平靜:['嗯嗯，我在聽。','原來是這樣，我懂了。','這樣喔…你覺得呢？'],低落:['嗯…我有點提不起勁，不過你說，我在聽。','是喔…'],
+ 難過:['…我現在有點難過，可以讓我安靜一下嗎？','嗯。'],生氣:['哼，我還在氣頭上。','不想講話。'],孤單:['你終於來了…我等好久了。','你跑去哪了啦，好久沒找我了。'],想睡:['呼…好睏喔，不過你說我聽。']};
+const FBP=['今天突然想到你，你在忙什麼呢？','我剛剛發了一下呆，在想你今天過得好不好。','欸，你吃飯了嗎？','好安靜喔…你在嗎？','突然想跟你說聲嗨～'];
+function fallback(ai,o){
+  if(o.proactive){if(!ai.lastUserAt)return`嗨，我是${ai.name}，很高興認識你！`;return rnd(FBP.filter(x=>x!==ai.lastText))||rnd(FBP);}
+  const a=FB[moodLabel(ai)]||FB.平靜;return rnd(a);}
+function setEng(s,txt,p){S.eng=s;const c=$('#engineChip');c.dataset.s=s;
+  $('#engineTxt').textContent=s==='ready'?'AI 模型已就緒（'+({'0.5B':'輕量','1.5B':'標準','3B':'進階'}[(S.settings.modelId.match(/(\d\.?\d*B)/)||[])[1]]||'')+'）':s==='loading'?`載入模型中… ${Math.round((p||0)*100)}%`:s==='error'?(txt||'載入失敗'):'簡易模式（尚未載入 AI 模型）';
+  const pr=$('#prog');pr.hidden=s!=='loading';pr.firstElementChild.style.width=Math.round((p||0)*100)+'%';
+  if(txt)$('#progTxt').textContent=s==='ready'?MODEL_LOADED_NOTE:txt;
+  $('#loadBtn').disabled=s==='loading';$('#loadBtn').textContent=s==='ready'?'重新載入／切換模型':'載入模型';
+  renderBanner();}
+async function loadModel(){
+  if(S.eng==='loading')return;
+  if(location.protocol==='file:'){setEng('error','請用網址或本機伺服器開啟，不能直接雙擊檔案。');return;}
+  if(!navigator.gpu){setEng('error','這個瀏覽器不支援 WebGPU。請改用較新的 Chrome、Edge 或 Safari。');return;}
+  setEng('loading','準備中…',0);
+  try{
+    const webllm=await import('https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.79/+esm');
+    if(S.engine){try{await S.engine.unload();}catch{}S.engine=null;}
+    // 不支援 shader-f16 的裝置（多數手機）要改用 q4f32 版本，否則會出現 ShaderModule 錯誤
+    const adapter=await navigator.gpu.requestAdapter();
+    if(!adapter)throw new Error('找不到可用的 GPU（WebGPU 無法啟用）');
+    const f16=adapter.features&&adapter.features.has('shader-f16');
+    const modelId=f16?S.settings.modelId:S.settings.modelId.replace('q4f16_1','q4f32_1');
+    S.engine=await webllm.CreateMLCEngine(modelId,{initProgressCallback:r=>setEng('loading',r.text,r.progress)});
+    S.settings.autoLoad=true;saveSettings();setEng('ready');
+  }catch(e){console.error(e);S.engine=null;
+    const msg=String(e&&e.message||e);
+    setEng('error','載入失敗：'+msg+(/ShaderModule|WebGPU|GPU/i.test(msg)?'\n建議：改選「輕量」模型再試一次，並把 Chrome 更新到最新版。':''));}}
+async function generate(messages,{onToken,maxTokens=170,temp=0.85}={}){
+  const stream=await S.engine.chat.completions.create({messages,stream:true,temperature:temp,top_p:0.92,max_tokens:maxTokens});
+  let out='';for await(const ch of stream){const d=ch.choices[0]?.delta?.content||'';if(d){out+=d;onToken&&onToken(out);}}
+  return out;}
+const enqueue=fn=>{S.qn++;S.queue=S.queue.then(fn).catch(console.error).finally(()=>{S.qn--;});return S.queue;};
+
+/* ============ 說話 ============ */
+async function reply(ai,o={}){
+  return enqueue(async()=>{
+    const open=S.cur===ai.id;let live=null,text='';
+    if(open)live=showTyping();
+    try{
+      const msgs=await loadMsgs(ai.id);
+      if(S.eng==='ready'){
+        text=clean(await generate(buildMessages(ai,msgs,o),{onToken:t=>live&&live.set(clean(t,ai))}),ai);
+      }else{await sleep(700+Math.random()*900);text=fallback(ai,o);}
+    }catch(e){console.error(e);text=fallback(ai,o);}
+    if(!text)text=fallback(ai,o);
+    live&&live.remove();
+    ai.lastAiAt=Date.now();ai.lastText=text;ai.sinceNotes++;
+    ai.state.energy=clamp(ai.state.energy-0.3);
+    if(o.proactive){ai.unanswered=(ai.unanswered||0)+1;
+      if(S.cur!==ai.id||document.hidden){ai.unread=(ai.unread||0)+(S.cur===ai.id?0:1);notify(ai,text);}}
+    await pushMsg(ai,'assistant',text,o.proactive?{auto:true}:{});
+    saveAI(ai);renderRoster();if(S.cur===ai.id){renderMsgs();renderHead();renderInfo();}
+    maybeConsolidate(ai);
+  });}
+function notify(ai,text){
+  document.title=totalUnread()?`(${totalUnread()}) 夥伴們`:'夥伴們';
+  if(S.settings.notify&&document.hidden&&'Notification'in window&&Notification.permission==='granted'){try{new Notification(ai.name,{body:text});}catch{}}}
+const totalUnread=()=>[...S.ais.values()].reduce((n,a)=>n+(a.unread||0),0);
+
+function tick(){
+  const now=Date.now();
+  for(const ai of S.ais.values())settle(ai,now);
+  if(S.cur&&S.infoOpen)renderMeters();
+  renderHead();
+  if(!S.settings.autoTalk||S.qn>0||now-S.lastProactive<40000||!S.ais.size)return;
+  const arr=[...S.ais.values()];
+  for(const a of arr)a._pri=a.traits.initiative+a.state.lonely*0.5+(a.id===S.cur?30:0)+Math.max(0,20-(now-(a.lastUserAt||0))/3600000);
+  arr.sort((a,b)=>b._pri-a._pri);
+  const awake=arr.slice(0,S.settings.activeMax);awake.forEach(a=>a._awake=true);arr.slice(S.settings.activeMax).forEach(a=>a._awake=false);
+  let best=null,bs=0;
+  for(const ai of awake){
+    if((ai.unanswered||0)>=3)continue;
+    const last=Math.max(ai.lastUserAt||0,ai.lastAiAt||0,ai.createdAt),gap=(now-last)/60000;
+    const minGap=(ai.lastUserAt?8:0.1)+(100-ai.traits.initiative)/100*232;
+    if(gap<minGap*(1+(ai.unanswered||0)*1.5))continue;
+    if(ai.state.energy<22&&Math.random()<.85)continue;
+    const p=0.2*Math.min(1,0.3+ai.state.energy/100)+ai.state.lonely/500;
+    if(Math.random()<p){const sc=gap/minGap+ai.state.lonely/100;if(sc>bs){bs=sc;best=ai;}}}
+  if(best){S.lastProactive=now;reply(best,{proactive:true,topic:pickTopic(best)});}
+}
+
+async function send(text){
+  const ai=S.ais.get(S.cur);if(!ai||!text.trim())return;
+  settle(ai);reactToUser(ai,text);extractFacts(ai,text);
+  ai.lastUserAt=Date.now();ai.unanswered=0;ai.sinceNotes++;ai.unread=0;
+  await pushMsg(ai,'user',text);renderMsgs();renderRoster();renderHead();renderInfo();saveAI(ai);
+  reply(ai,{proactive:false});}
+
+/* ============ 畫面 ============ */
+const aiColor=ai=>ai.color||COLORS[0];
+function avatar(ai,sm){const c=MOODCLR[moodLabel(ai)];
+  return el('div',{class:'av'+(sm?' sm':''),style:`background:${aiColor(ai)};--ring:var(--m-${c})`,'aria-hidden':'true'},[...ai.name][0]);}
+function timeShort(ts){if(!ts)return'';const d=new Date(ts),n=new Date();
+  return d.toDateString()===n.toDateString()?d.toTimeString().slice(0,5):`${d.getMonth()+1}/${d.getDate()}`;}
+function renderRoster(){
+  const list=$('#list');list.textContent='';
+  const arr=[...S.ais.values()].sort((a,b)=>Math.max(b.lastAiAt||0,b.lastUserAt||0,b.createdAt)-Math.max(a.lastAiAt||0,a.lastUserAt||0,a.createdAt));
+  $('#count').textContent=`${arr.length} / ${MAX_AI}`;
+  if(!arr.length){list.append(el('div',{class:'empty'},el('p',{text:'名冊是空的。'})));}
+  for(const ai of arr){
+    list.append(el('button',{class:'item','aria-current':S.cur===ai.id?'true':'false',onclick:()=>openChat(ai.id)},
+      avatar(ai),
+      el('div',{class:'mid'},el('div',{class:'nm'},el('b',{text:ai.name}),el('span',{class:'tag',text:moodLabel(ai)+(ai._awake===false?'・休眠':'')})),
+        el('div',{class:'pv',text:ai.lastText||'還沒說過話'})),
+      el('div',{class:'rt'},el('span',{text:timeShort(Math.max(ai.lastAiAt||0,ai.lastUserAt||0))}),ai.unread?el('span',{class:'badge',text:ai.unread}):null)));}
+  document.title=totalUnread()?`(${totalUnread()}) 夥伴們`:'夥伴們';}
+function renderHead(){
+  const ai=S.ais.get(S.cur);if(!ai)return;
+  $('#cav').replaceChildren(avatar(ai,true));$('#cname').textContent=ai.name;
+  $('#cmood').textContent=`${ai.gender}・${moodLabel(ai)}・${relLabel(ai.state.affinity)}`;}
+function renderMeters(){
+  const ai=S.ais.get(S.cur);if(!ai)return;const st=ai.state;
+  const rows=[['好感',st.affinity],['心情',(st.mood+100)/2],['精力',st.energy],['孤單',st.lonely],['怒氣',st.anger]];
+  const box=$('#info .meters');if(!box)return;box.textContent='';
+  for(const[n,v]of rows)box.append(el('div',{class:'meter'},el('span',{text:n}),el('div',{class:'bar'},el('i',{style:`width:${Math.round(v)}%`})),el('output',{text:Math.round(v)})));}
+function renderInfo(){
+  const ai=S.ais.get(S.cur),box=$('#info');if(!ai)return;
+  box.hidden=!S.infoOpen;$('#infoBtn').setAttribute('aria-expanded',S.infoOpen);if(!S.infoOpen)return;
+  const notes=el('div',{class:'notes'},el('h3',{text:`${ai.name}記得的事（${ai.notes.length}）`}));
+  if(!ai.notes.length)notes.append(el('div',{class:'none',text:'還沒有長期記憶。聊幾句之後，牠會自己整理。'}));
+  else notes.append(el('ul',{},ai.notes.map((n,i)=>el('li',{},el('span',{text:n}),el('button',{'aria-label':'忘掉這條',title:'忘掉這條',onclick:()=>{ai.notes.splice(i,1);saveAI(ai);renderInfo();}},'✕')))));
+  box.replaceChildren(el('div',{class:'meters'}),notes);renderMeters();}
+function renderBanner(){
+  const b=$('#banner');if(!b)return;b.textContent='';
+  if(S.eng==='ready')return;
+  let m;
+  if(location.protocol==='file:')m=el('div',{class:'banner'},el('b',{text:'目前是簡易模式。'}),' 要使用 AI 模型，請不要直接雙擊開啟檔案。在檔案所在資料夾執行 ',el('code',{text:'python3 -m http.server 8000'}),'，再用瀏覽器打開 ',el('code',{text:'http://localhost:8000'}),'；或把檔案放到 GitHub Pages、Netlify 這類免費空間。');
+  else if(S.eng==='loading')m=el('div',{class:'banner',text:'模型載入中，請稍候。這段時間夥伴會先用簡短的內建句子回應。'});
+  else m=el('div',{class:'banner'},el('b',{text:'目前是簡易模式：'}),'回覆來自內建短句。到「設定」載入 AI 模型後，夥伴才會真的聽懂並記住你說的話。');
+  b.append(m);}
+let lastDay='';
+function renderMsgs(){
+  const ai=S.ais.get(S.cur),box=$('#msgs');if(!ai)return;
+  const msgs=S.msgs.get(ai.id)||[];box.textContent='';lastDay='';
+  if(!msgs.length)box.append(el('div',{class:'day',text:'還沒有對話，說聲嗨吧'}));
+  for(const m of msgs.slice(-200)){
+    const d=new Date(m.ts).toDateString();
+    if(d!==lastDay){lastDay=d;box.append(el('div',{class:'day',text:d===new Date().toDateString()?'今天':new Date(m.ts).toLocaleDateString('zh-TW',{month:'long',day:'numeric',weekday:'short'})}));}
+    box.append(el('div',{class:'msg '+(m.role==='user'?'me':'ai')},el('div',{class:'b',text:m.content}),
+      el('div',{class:'t'},m.auto?el('span',{class:'auto',text:'主動說話・'}):null,timeShort(m.ts))));}
+  box.scrollTop=box.scrollHeight;}
+function showTyping(){
+  const box=$('#msgs');const b=el('div',{class:'b'},el('i'),el('i'),el('i'));
+  const w=el('div',{class:'msg ai typing'},b);box.append(w);box.scrollTop=box.scrollHeight;
+  return{set(t){if(!b.classList.contains('txt')){b.classList.add('txt');b.replaceChildren();}b.textContent=t;box.scrollTop=box.scrollHeight;},remove(){w.remove();}};}
+async function openChat(id){
+  S.cur=id;const ai=S.ais.get(id);ai.unread=0;saveAI(ai);await loadMsgs(id);
+  $('#chatEmpty').style.display='none';const cb=$('#chatBox');cb.hidden=false;cb.style.display='flex';
+  $('#app').dataset.view='chat';renderHead();renderInfo();renderBanner();renderMsgs();renderRoster();
+  if(!matchMedia('(max-width:820px)').matches)$('#inp').focus();}
+function showList(){$('#app').dataset.view='list';}
+
+/* ============ 建立／編輯 ============ */
+let draft={color:COLORS[0]};
+function buildForm(){
+  const ch=$('#archChips');ch.textContent='';
+  ARCH.forEach((a,i)=>ch.append(el('button',{class:'chip',type:'button',onclick:()=>fillArch(a)},a.k)));
+  const sl=$('#sliders');sl.textContent='';
+  TRAITS.forEach(([k,n])=>{const out=el('output',{id:'o_'+k,text:'50'});
+    sl.append(el('div',{class:'sl'},el('label',{for:'t_'+k,text:n}),el('input',{type:'range',id:'t_'+k,min:0,max:100,value:50,oninput:e=>{out.textContent=e.target.value;}}),out));});
+  const sw=$('#swatches');sw.textContent='';
+  COLORS.forEach(c=>sw.append(el('button',{type:'button',style:`background:${c}`,'aria-label':'顏色 '+c,'aria-pressed':'false',onclick:()=>setColor(c)})));
+  $('#fGender').addEventListener('change',e=>{$('#fGenderC').hidden=e.target.value!=='__c';});}
+function setColor(c){draft.color=c;[...$('#swatches').children].forEach(b=>b.setAttribute('aria-pressed',b.style.background&&rgb2hex(b.style.background)===c.toLowerCase()?'true':'false'));}
+const rgb2hex=s=>{const m=s.match(/\d+/g);return m?'#'+m.slice(0,3).map(n=>(+n).toString(16).padStart(2,'0')).join(''):s;};
+function setTraits(t){TRAITS.forEach(([k],i)=>{$('#t_'+k).value=t[i];$('#o_'+k).textContent=t[i];});}
+function fillArch(a,keepName){
+  $('#fPersona').value=a.p;$('#fStyle').value=a.s;$('#fBack').value=a.b;setTraits(a.t);
+  if(!keepName){const g=$('#fGender').value==='__c'?'中性':$('#fGender').value;$('#fName').value=rnd(NAMES[g]||NAMES.中性);}
+  setColor(rnd(COLORS));}
+function randomAi(){const g=rnd(['女','男','中性']);$('#fGender').value=g;$('#fGenderC').hidden=true;fillArch(rnd(ARCH));$('#fName').value=rnd(NAMES[g]);}
+function openAiDialog(id){
+  S.editing=id||null;const ai=id&&S.ais.get(id);
+  $('#aiTitle').textContent=ai?`編輯 ${ai.name}`:'新夥伴';
+  $('#aiDel').hidden=!ai;$('#aiWipe').hidden=!ai;$('#archChips').hidden=!!ai;$('#aiRand').hidden=!!ai;
+  if(ai){$('#fName').value=ai.name;
+    const std=['女','男','中性'].includes(ai.gender);$('#fGender').value=std?ai.gender:'__c';$('#fGenderC').hidden=std;$('#fGenderC').value=std?'':ai.gender;
+    $('#fPersona').value=ai.persona;$('#fStyle').value=ai.style;$('#fBack').value=ai.back;setTraits(TRAITS.map(([k])=>ai.traits[k]));setColor(aiColor(ai));}
+  else{if(S.ais.size>=MAX_AI){alert(`一台裝置最多 ${MAX_AI} 位夥伴。`);return;}randomAi();}
+  $('#dlgAi').showModal();}
+async function saveAiForm(e){
+  e.preventDefault();
+  const name=$('#fName').value.trim();if(!name)return;
+  const g=$('#fGender').value==='__c'?($('#fGenderC').value.trim()||'中性'):$('#fGender').value;
+  const traits={};TRAITS.forEach(([k])=>traits[k]=+$('#t_'+k).value);
+  const f={name,gender:g,persona:$('#fPersona').value.trim()||'個性普通，真誠。',style:$('#fStyle').value.trim()||'自然口語。',back:$('#fBack').value.trim()||'過著平凡的日子。',traits,color:draft.color};
+  $('#dlgAi').close();
+  if(S.editing){const ai=S.ais.get(S.editing);Object.assign(ai,f);await saveAI(ai);renderRoster();renderHead();renderInfo();return;}
+  const now=Date.now();
+  const ai={id:uid(),...f,createdAt:now,lastTick:now,lastUserAt:0,lastAiAt:0,lastText:'',unread:0,unanswered:0,sinceNotes:0,notes:[],
+    state:{affinity:15,mood:15,energy:70,lonely:10,anger:0}};
+  S.ais.set(ai.id,ai);S.msgs.set(ai.id,[]);await saveAI(ai);renderRoster();await openChat(ai.id);
+  reply(ai,{proactive:true,topic:'第一次見面，自我介紹並打招呼'});}
+
+/* ============ 設定與備份 ============ */
+function openSettings(){
+  $('#sName').value=S.settings.myName;$('#sModel').value=S.settings.modelId;$('#sAuto').checked=S.settings.autoTalk;
+  $('#sActive').value=S.settings.activeMax;$('#sActiveV').textContent=S.settings.activeMax;$('#sNotify').checked=S.settings.notify;
+  if(navigator.storage&&navigator.storage.estimate)navigator.storage.estimate().then(e=>{$('#storeInfo').textContent=`資料只存在這台裝置的這個瀏覽器。已使用約 ${(e.usage/1048576).toFixed(1)} MB。`;}).catch(()=>{});
+  $('#dlgSet').showModal();}
+async function exportAll(){
+  const msgs=await rq(store('msgs').getAll());
+  const data={app:'companions',version:1,exportedAt:new Date().toISOString(),settings:S.settings,ais:[...S.ais.values()].map(a=>{const c={...a};delete c._pri;delete c._awake;delete c._cons;return c;}),msgs};
+  const url=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));
+  const a=el('a',{href:url,download:`夥伴備份-${new Date().toISOString().slice(0,10)}.json`});document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);}
+async function importAll(file){
+  try{
+    const d=JSON.parse(await file.text());if(d.app!=='companions'||!Array.isArray(d.ais))throw new Error('不是夥伴備份檔');
+    if(!confirm(`匯入會取代目前的全部資料（現有 ${S.ais.size} 位夥伴）。確定嗎？`))return;
+    await new Promise((res,rej)=>{const t=S.db.transaction(['ais','msgs'],'readwrite');t.objectStore('ais').clear();t.objectStore('msgs').clear();
+      d.ais.slice(0,MAX_AI).forEach(a=>t.objectStore('ais').put(a));d.msgs.forEach(m=>{delete m.mid;t.objectStore('msgs').add(m);});t.oncomplete=res;t.onerror=()=>rej(t.error);});
+    location.reload();
+  }catch(e){alert('匯入失敗：'+e.message);}}
+
+/* ============ 啟動 ============ */
+async function init(){
+  buildForm();
+  try{S.db=await openDB();}catch(e){$('#chatEmpty').querySelector('p').textContent='無法使用瀏覽器儲存空間（可能是無痕模式），記憶無法保存。';console.error(e);return;}
+  try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch{}
+  const st=await rq(store('meta').get('settings'));if(st)Object.assign(S.settings,st);
+  for(const a of await rq(store('ais').getAll())){a.notes=a.notes||[];S.ais.set(a.id,a);}
+  const now=Date.now();for(const ai of S.ais.values())settle(ai,now);
+  renderRoster();setEng('idle');
+  $('#newBtn').onclick=$('#newBtn2').onclick=()=>openAiDialog();
+  $('#setBtn').onclick=$('#engineChip').onclick=openSettings;
+  $('#aiX').onclick=()=>$('#dlgAi').close();$('#setX').onclick=$('#setOk').onclick=()=>$('#dlgSet').close();
+  $('#aiForm').addEventListener('submit',saveAiForm);$('#aiRand').onclick=randomAi;
+  $('#editBtn').onclick=()=>openAiDialog(S.cur);$('#backBtn').onclick=showList;
+  $('#infoBtn').onclick=()=>{S.infoOpen=!S.infoOpen;renderInfo();};
+  $('#aiDel').onclick=async()=>{const ai=S.ais.get(S.editing);if(!ai||!confirm(`確定刪除「${ai.name}」？牠的所有對話與記憶都會消失。`))return;
+    await rq(store('ais','readwrite').delete(ai.id));await delMsgs(ai.id);S.ais.delete(ai.id);S.msgs.delete(ai.id);$('#dlgAi').close();
+    if(S.cur===ai.id){S.cur=null;$('#chatBox').style.display='none';$('#chatEmpty').style.display='flex';showList();}renderRoster();};
+  $('#aiWipe').onclick=async()=>{const ai=S.ais.get(S.editing);if(!ai||!confirm(`清除「${ai.name}」的對話與記憶？個性設定會保留。`))return;
+    await delMsgs(ai.id);Object.assign(ai,{notes:[],lastText:'',lastAiAt:0,lastUserAt:0,unanswered:0,sinceNotes:0,state:{affinity:15,mood:15,energy:70,lonely:10,anger:0}});
+    await saveAI(ai);$('#dlgAi').close();renderRoster();if(S.cur===ai.id){renderMsgs();renderInfo();renderHead();}};
+  $('#sName').onchange=e=>{S.settings.myName=e.target.value.trim();saveSettings();};
+  $('#sModel').onchange=e=>{S.settings.modelId=e.target.value;saveSettings();};
+  $('#sAuto').onchange=e=>{S.settings.autoTalk=e.target.checked;saveSettings();};
+  $('#sActive').oninput=e=>{S.settings.activeMax=+e.target.value;$('#sActiveV').textContent=e.target.value;saveSettings();};
+  $('#sNotify').onchange=async e=>{S.settings.notify=e.target.checked;
+    if(e.target.checked&&'Notification'in window&&Notification.permission==='default'){const p=await Notification.requestPermission();if(p!=='granted'){e.target.checked=false;S.settings.notify=false;}}saveSettings();};
+  $('#loadBtn').onclick=loadModel;$('#expBtn').onclick=exportAll;
+  $('#impBtn').onclick=()=>$('#impFile').click();$('#impFile').onchange=e=>{if(e.target.files[0])importAll(e.target.files[0]);};
+  const inp=$('#inp'),grow=()=>{inp.style.height='auto';inp.style.height=Math.min(140,inp.scrollHeight)+'px';};
+  inp.addEventListener('input',grow);
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();$('#form').requestSubmit();}});
+  $('#form').addEventListener('submit',e=>{e.preventDefault();const t=inp.value.trim();if(!t)return;inp.value='';grow();send(t);});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){const n=Date.now();S.ais.forEach(a=>settle(a,n));renderHead();if(S.cur){const a=S.ais.get(S.cur);a.unread=0;}renderRoster();}});
+  setInterval(tick,15000);
+  if(S.settings.autoLoad&&location.protocol!=='file:')loadModel();
+  if(S.ais.size&&!matchMedia('(max-width:820px)').matches){const first=[...S.ais.values()].sort((a,b)=>Math.max(b.lastAiAt||0,b.lastUserAt||0)-Math.max(a.lastAiAt||0,a.lastUserAt||0))[0];openChat(first.id);}
+}
+init();
+</script>
+</body>
+</html>
